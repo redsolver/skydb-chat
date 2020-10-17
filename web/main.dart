@@ -133,7 +133,6 @@ void _startLoop() async {
         continue;
       }
     }
-    
 
     await Future.delayed(Duration(seconds: 2));
   }
@@ -191,7 +190,6 @@ Future<void> updateUserId(String userId) async {
     final data = json.decode(file.asString);
 
     if (userId == 'index') {
-   
       index = data.cast<String, int>();
 
       bool update = false;
@@ -202,7 +200,10 @@ Future<void> updateUserId(String userId) async {
         firstStart = true;
       }
       final now = DateTime.now().millisecondsSinceEpoch;
-      for (final key in index.keys) {
+
+      final list = List.from(index.keys);
+
+      for (final key in list) {
         int diff = now - index[key];
 
         if (diff > ((60 * (30 + Random().nextInt(30))) * 1000)) {
