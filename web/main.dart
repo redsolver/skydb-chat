@@ -15,6 +15,8 @@ const temporaryTrustedIDs = [
 ];
 
 void main() {
+  Storage localStorage = window.localStorage;
+
   String hash = window.location.hash;
 
   if (hash.contains('#')) hash = hash.substring(1);
@@ -36,6 +38,21 @@ void main() {
 
   SkynetConfig.host = portal;
 
+  try {
+    if (localStorage.containsKey('login')) {
+      final entry = localStorage['login'];
+      final data = json.decode(entry);
+
+      username = data['username'];
+      user = User.fromSeed(data['seed'].cast<int>());
+
+      setInitialState();
+      return;
+    }
+  } catch (e) {
+    print(e);
+  }
+
   final FormElement form = querySelector('#loginForm');
 
   print(form);
@@ -46,36 +63,25 @@ void main() {
     username = (querySelector('#usernameField') as InputElement).value;
     password = (querySelector('#passwordField') as InputElement).value;
 
-    user = User(username, password);
+    final bool stayLoggedIn =
+        (querySelector('#stayField') as CheckboxInputElement).checked;
+
+    user = User(username, password, keepSeed: stayLoggedIn);
+
+    if (stayLoggedIn) {
+      localStorage['login'] = json.encode(
+        {
+          'username': username,
+          'seed': user.seed,
+        },
+      );
+      user.seed = null;
+    }
 
     setInitialState();
 
     password = '';
 
-    (querySelector('#msgField') as InputElement).focus();
-
-    final FormElement form = querySelector('#msgForm');
-
-    setStatus('Online');
-
-    form.onSubmit.listen((event) {
-      event.preventDefault();
-
-      if (lockMsgSend) return false;
-
-      print('msg');
-      final String msg = (querySelector('#msgField') as InputElement).value;
-      print(msg);
-      setStatus('Sending message...');
-      _sendMsg(msg);
-
-      return false;
-    });
-    /*   querySelector('#msgField').onSubmit.listen((event) {
-      print(event);
-    }); */
-
-    _startLoop();
     return false;
   });
 }
@@ -85,11 +91,31 @@ void setStatus(String status) {
 }
 
 void setInitialState() {
-  final html = '''
-  ''';
+  (querySelector('#msgField') as InputElement).focus();
+
+  final FormElement form = querySelector('#msgForm');
+
+  setStatus('Online');
+
+  form.onSubmit.listen((event) {
+    event.preventDefault();
+
+    if (lockMsgSend) return false;
+
+    print('msg');
+    final String msg = (querySelector('#msgField') as InputElement).value;
+    print(msg);
+    setStatus('Sending message...');
+    _sendMsg(msg);
+
+    return false;
+  });
+
   querySelector('#output').setInnerHtml('');
 
   querySelector('#main').style.display = 'block';
+
+  _startLoop();
 }
 
 void setState() {
