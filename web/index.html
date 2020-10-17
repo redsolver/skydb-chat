@@ -30,7 +30,7 @@
   </style>
 </head>
 
-<body style="background-color: var(--background-color); color: var(--primary-color);">
+<body style="background-color: var(--background-color); color: var(--primary-color); overflow-wrap: break-word;">
 
   <div id="output">
     <form style="max-width: 500px;" id="loginForm">
@@ -59,7 +59,7 @@
     <div class="container">
 
       <div class="row">
-        <div class="column">
+        <div class="column" style="max-width: 900px;">
 
           <div id="status">
             Loading...
@@ -85,11 +85,15 @@
           </div>
         </div>
         <div class="column column-40">
+
           <div id="users">
 
           </div>
 
           <button id="darkmode-button" class="button button-outline" style="margin-top: 6px;">Toggle dark mode</button>
+
+          <button id="logout-button" class="button button-outline" style="margin-top: 8px; margin-left: 8px;">Log
+            out</button>
 
         </div>
       </div>

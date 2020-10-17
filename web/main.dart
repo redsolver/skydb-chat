@@ -91,7 +91,16 @@ void setStatus(String status) {
 }
 
 void setInitialState() {
+  querySelector('#output').setInnerHtml('');
+
+  querySelector('#main').style.display = 'block';
+
   (querySelector('#msgField') as InputElement).focus();
+
+  (querySelector('#logout-button') as ButtonElement).onClick.listen((event) {
+    window.localStorage.remove('login');
+    window.location.reload();
+  });
 
   final FormElement form = querySelector('#msgForm');
 
@@ -110,10 +119,6 @@ void setInitialState() {
 
     return false;
   });
-
-  querySelector('#output').setInnerHtml('');
-
-  querySelector('#main').style.display = 'block';
 
   _startLoop();
 }
