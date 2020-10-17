@@ -95,7 +95,13 @@ void setState() {
     if (!users.containsKey(m.userId)) {
       users[m.userId] = m.username;
     }
-    html += '<div class="message"><b>${m.username}</b>: ${m.msg}</div>';
+    if (greyedOutMessageIds.contains(m.id)) {
+      html +=
+          '<div class="message"><em>[Sending...] <b>${m.username}</b>: ${m.msg}</em></div>';
+    } else {
+      html +=
+          '<div class="message"><b>${m.username}</b>: ${m.msg} <em class="time">${timeago.format(m.sendAt)}</em></div>';
+    }
   }
 
   querySelector('#messages').setInnerHtml(html);
@@ -236,6 +242,10 @@ Future<void> updateUserId(String userId) async {
       for (final item in data) {
         final msg = Message.fromJson(item, userId);
 
+        if (greyedOutMessageIds.contains(msg.id)) {
+          greyedOutMessageIds.remove(msg.id);
+        }
+
         if (!messageIds.contains(msg.id)) {
           messages.add(msg);
           messageIds.add(msg.id);
@@ -265,6 +275,8 @@ Map<String, int> index = {};
 
 Set<String> messageIds = {};
 
+Set<String> greyedOutMessageIds = {};
+
 List<Message> messages = [];
 List<Message> ownMessages = [];
 
@@ -282,6 +294,7 @@ Future<void> _sendMsg(String message) async {
     ownMessages.add(msg);
     messages.add(msg);
     messageIds.add(msg.id);
+    greyedOutMessageIds.add(msg.id);
 
     messages.sort((a, b) => b.sendAt.compareTo(a.sendAt));
 
