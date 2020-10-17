@@ -22,9 +22,16 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.css">
 
   <script defer src="main.dart.js"></script>
+  <style>
+    input,
+    select,
+    textarea {
+      color: var(--primary-color);
+    }
+  </style>
 </head>
 
-<body>
+<body style="background-color: var(--background-color); color: var(--primary-color);">
 
   <div id="output">
     <form style="max-width: 500px;" id="loginForm">
@@ -34,7 +41,7 @@
 
         <label for="passwordField">Password</label>
         <input type="password" id="passwordField">
-        
+
         <input class="button-primary" type="submit" value="Login">
       </fieldset>
     </form>
@@ -62,7 +69,12 @@
             Loading messages...
           </div>
         </div>
-        <div class="column column-40" id="users">
+        <div class="column column-40">
+          <div id="users">
+
+          </div>
+
+          <button id="darkmode-button" class="button button-outline" style="margin-top: 6px;">Toggle dark mode</button>
 
         </div>
       </div>
@@ -70,6 +82,18 @@
 
     </div>
   </div>
+  <script src="static/js/darken.js"></script>
+  <script>
+    const darkmode = new darken({
+      class: "darkmode-active",
+      variables: {
+        "--primary-color": ["#000000", "#fafafa"],
+        "--background-color": ["#fafafa", "#000000"],
+        "--accent-color": ["#00a819", "#1ed660"]
+      },
+      toggle: "#darkmode-button",
+    });
+  </script>
 
 </body>
 
