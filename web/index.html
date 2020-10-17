@@ -11,15 +11,14 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="icon" href="favicon.ico">
 
-  <!-- TODO Don't use CDNs -->
   <!-- Google Fonts -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300italic,700,700italic">
+  <link rel="stylesheet" href="static/css/font.css">
 
   <!-- CSS Reset -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.css">
+  <link rel="stylesheet" href="static/css/normalize.css">
 
   <!-- Milligram CSS -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.css">
+  <link rel="stylesheet" href="static/css/milligram.css">
 
   <script defer src="main.dart.js"></script>
   <style>
@@ -43,6 +42,9 @@
         <input type="password" id="passwordField">
 
         <input class="button-primary" type="submit" value="Login">
+
+        <p>Note: You can use any username+password combination you want, but you should remember it if you want to keep
+          your Public ID the next time you login.</p>
       </fieldset>
     </form>
   </div>
@@ -59,10 +61,18 @@
           </div>
           <form id="msgForm" style="margin-bottom: 0px;">
 
-            <input type="text" placeholder="Write something..." id="msgField" autofocus autocomplete="off">
+            <div style="display: flex;">
+
+              <div style="padding-right: 10px; flex-grow: 1;">
+                <input type="text" placeholder="Write something..." id="msgField" autofocus autocomplete="off">
+
+              </div>
 
 
-            <input class="button-primary float-right" type="submit" value="Send" style="width:70px; padding: 0 1.0rem;">
+              <input class="button-primary float-right" type="submit" value="Send"
+                style="flex-basis: 70px;  padding: 0 1.0rem;">
+
+            </div>
 
           </form>
           <div id="messages" style="padding-left: 8px;">

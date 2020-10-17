@@ -5,7 +5,7 @@ import 'dart:math';
 import 'package:skynet/skynet.dart';
 import 'package:skynet/src/registry.dart';
 import 'package:uuid/uuid.dart';
-import 'package:timeago/timeago.dart' as timeago; // TODO Show message timestamp
+import 'package:timeago/timeago.dart' as timeago;
 import 'package:http/http.dart' as http;
 
 FileID fileID;
@@ -49,6 +49,8 @@ void main() {
     user = User(username, password);
 
     setInitialState();
+
+    password = '';
 
     (querySelector('#msgField') as InputElement).focus();
 
@@ -106,10 +108,17 @@ void setState() {
       String name = '<b>${m.username}</b>';
 
       if (temporaryTrustedIDs.contains(m.userId)) {
-        name = '<b class="trust">(VERIFIED) ${m.username}</b>';
+        name = '<b class="trust">✓ ${m.username}</b>';
+      }
+
+      String msgText = m.msg;
+
+      if (msgText.length > 3000) {
+        msgText = msgText.substring(0, 3000) +
+            '... [cut down from ${msgText.length} to 3000 characters by your client]';
       }
       html +=
-          '<div class="message">$name: ${m.msg} <em class="time">${timeago.format(m.sendAt)}</em></div>';
+          '<div class="message">$name: $msgText <em class="time">${timeago.format(m.sendAt)}</em></div>';
     }
   }
 
@@ -140,7 +149,7 @@ void _startLoop() async {
       'index',
       ...index.keys,
     ]) {
-      if ((userId == user.id) && firstStart) continue;
+      // if ((userId == user.id) && firstStart) continue;
 
       if (!threads.contains(userId)) {
         updateUserId(userId);
@@ -163,7 +172,7 @@ Future<void> updateUserId(String userId) async {
       if (userId == 'index') {
         print('Init Chat...');
 
-        firstStart = true;
+        // firstStart = true;
         index[user.id] = DateTime.now().millisecondsSinceEpoch;
         final res = await setFile(
             publicUser,
@@ -182,6 +191,8 @@ Future<void> updateUserId(String userId) async {
         return;
       }
     }
+
+    // print('$userId ${existing.value.revision}');
 
     final skylink = String.fromCharCodes(existing.value.data);
 
@@ -212,7 +223,7 @@ Future<void> updateUserId(String userId) async {
       if (!index.containsKey(user.id)) {
         index[user.id] = DateTime.now().millisecondsSinceEpoch;
         update = true;
-        firstStart = true;
+        // firstStart = true;
       }
       final now = DateTime.now().millisecondsSinceEpoch;
 
