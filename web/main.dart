@@ -108,7 +108,7 @@ void setState() {
       String name = '<b>${m.username}</b>';
 
       if (temporaryTrustedIDs.contains(m.userId)) {
-        name = '<b class="trust">(VERIFIED) ${m.username}</b>';
+        name = '<b class="trust">✓ ${m.username}</b>';
       }
 
       String msgText = m.msg;
