@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="scaffolded-by" content="https://github.com/dart-lang/stagehand">
+  <title>skydb_web_chat</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="favicon.ico">
+
+  <!-- TODO Don't use CDNs -->
+  <!-- Google Fonts -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300italic,700,700italic">
+
+  <!-- CSS Reset -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.css">
+
+  <!-- Milligram CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.css">
+
+  <script defer src="main.dart.js"></script>
+</head>
+
+<body>
+
+  <div id="output">
+    <form style="max-width: 500px;" id="loginForm">
+      <fieldset>
+        <label for="usernameField">Username</label>
+        <input type="text" id="usernameField" autofocus>
+
+        <label for="passwordField">Password</label>
+        <input type="password" id="passwordField">
+        
+        <input class="button-primary" type="submit" value="Login">
+      </fieldset>
+    </form>
+  </div>
+
+
+  <div id="main" style="display: none;">
+    <div class="container">
+
+      <div class="row">
+        <div class="column">
+
+          <div id="status">
+            Loading...
+          </div>
+          <form id="msgForm" style="margin-bottom: 0px;">
+
+            <input type="text" placeholder="Write something..." id="msgField" autofocus autocomplete="off">
+
+
+            <input class="button-primary float-right" type="submit" value="Send" style="width:70px; padding: 0 1.0rem;">
+
+          </form>
+          <div id="messages" style="padding-left: 8px;">
+            Loading messages...
+          </div>
+        </div>
+        <div class="column column-40" id="users">
+
+        </div>
+      </div>
+
+
+    </div>
+  </div>
+
+</body>
+
+</html>
