@@ -10,6 +10,10 @@ import 'package:http/http.dart' as http;
 
 FileID fileID;
 
+const temporaryTrustedIDs = [
+  'd74e7376255077b6174b8531f23b1c4f80031a0a82ead6ca27cdabde109c9cee',
+];
+
 void main() {
   String hash = window.location.hash;
 
@@ -99,8 +103,13 @@ void setState() {
       html +=
           '<div class="message"><em>[Sending...] <b>${m.username}</b>: ${m.msg}</em></div>';
     } else {
+      String name = '<b>${m.username}</b>';
+
+      if (temporaryTrustedIDs.contains(m.userId)) {
+        name = '<b class="trust">(VERIFIED) ${m.username}</b>';
+      }
       html +=
-          '<div class="message"><b>${m.username}</b>: ${m.msg} <em class="time">${timeago.format(m.sendAt)}</em></div>';
+          '<div class="message">$name: ${m.msg} <em class="time">${timeago.format(m.sendAt)}</em></div>';
     }
   }
 

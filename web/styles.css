@@ -19,3 +19,13 @@ html, body {
 .message {
   padding-top: 10px;
 }
+
+.time {
+  font-size: 80%;
+  float: right;
+  padding-right: 4px;
+}
+
+.trust {
+  color: green;
+}
