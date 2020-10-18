@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:html';
 import 'dart:math';
 
+import 'package:markdown/markdown.dart';
 import 'package:skynet/skynet.dart';
 import 'package:skynet/src/registry.dart';
 import 'package:uuid/uuid.dart';
@@ -128,7 +129,7 @@ void setInitialState() {
     print(msg);
     if (ownMessages.isEmpty) {
       setStatus(
-          'Sending message... (The first message with your new account can take up to 1 min)');
+          'Sending message... (The first message with your account can take up to 1 min)');
     } else {
       setStatus('Sending message...');
     }
@@ -156,6 +157,10 @@ void setState() {
       String name = '${m.username}';
       name = escapeHtml(name);
 
+      if (name.length > 32) {
+        name = name.substring(0, 32);
+      }
+
       String richName = '$name (${m.userId})';
 
       name = '<b title="${richName}">${name}</b>';
@@ -164,30 +169,88 @@ void setState() {
         name = '<b class="trust" title="${richName}">✓ ${m.username}</b>';
       }
 
-      String msgText = m.msg;
-      msgText = escapeHtml(msgText);
+      String msgText;
 
-      if (msgText.length > 3000) {
-        msgText = msgText.substring(0, 3000) +
-            '... [cut down from ${msgText.length} to 3000 characters by your client]';
+      if (msgTextCache.containsKey(m.id)) {
+        msgText = msgTextCache[m.id];
+      } else {
+        msgText = escapeHtml(m.msg);
+
+        if (msgText.length > 3000) {
+          msgText = msgText.substring(0, 3000) +
+              '... [cut down from ${msgText.length} to 3000 characters by your client]';
+        }
+
+        msgText = msgText.replaceAllMapped(RegExp(r'[#@][^ ]+'), (match) {
+          final str = msgText.substring(match.start, match.end);
+
+          if (str.startsWith('@')) {
+            /*  final ids = [m.userId, user.id];
+          ids.sort((a, b) => a.compareTo(b)); */
+
+            return '<a>$str</a>';
+          } else {
+            return '<a href="$str">$str</a>';
+          }
+        });
+
+        msgText = msgText.replaceAll('sia://', 'https://${SkynetConfig.host}/');
+
+        msgText = markdownToHtml(
+          msgText,
+          extensionSet: ExtensionSet.gitHubWeb,
+        );
+
+        if (msgText.length >= 7)
+          msgText = msgText.substring(3, msgText.length - 5);
+
+        print('[$msgText]');
+        msgTextCache[m.id] = msgText;
       }
+
       html +=
           '<div class="message">$name: $msgText <em class="time">${timeago.format(m.sendAt)}</em></div>';
     }
   }
 
-  querySelector('#messages').setInnerHtml(html);
+  querySelector('#messages').setInnerHtml(html,
+      treeSanitizer:
+          NodeTreeSanitizer(NodeValidator(uriPolicy: SameDomainUriPolicy())));
 
   String usersHtml = '<div><b>Users</b></div>';
 
   for (String userId in users.keys) {
     final cl = index.containsKey(userId) ? 'user' : 'archived-user';
+    String name = escapeHtml(users[userId]);
+
+    if (name.length > 32) {
+      name = name.substring(0, 32);
+    }
+
     usersHtml +=
-        '<div class="$cl">${escapeHtml(users[userId])} (${userId.substring(0, 8)}...)</div>';
+        '<div class="$cl">${name} (${userId.substring(0, 8)}...)</div>';
   }
 
   querySelector('#users').setInnerHtml(usersHtml);
 }
+
+class SameDomainUriPolicy implements UriPolicy {
+  final AnchorElement _hiddenAnchor = new AnchorElement();
+  final Location _loc = window.location;
+
+  bool allowsUri(String uri) {
+    _hiddenAnchor.href = uri;
+    // IE leaves an empty hostname for same-origin URIs.
+    return (_hiddenAnchor.hostname.endsWith(_loc.hostname) &&
+            _hiddenAnchor.port == _loc.port &&
+            _hiddenAnchor.protocol == _loc.protocol) ||
+        (_hiddenAnchor.hostname == '' &&
+            _hiddenAnchor.port == '' &&
+            (_hiddenAnchor.protocol == ':' || _hiddenAnchor.protocol == ''));
+  }
+}
+
+Map<String, String> msgTextCache = {};
 
 String escapeHtml(String potentialHtml) {
   return potentialHtml.replaceAll('<', "&lt;").replaceAll('>', "&gt;");
@@ -334,8 +397,10 @@ Future<void> updateUserId(String userId) async {
         }
       }
       userSkylinkCache[userId] = skylink;
-      cleaningFlow();
+      // cleaningFlow();
     } else if (userId == 'index') {
+      // print(data);
+
       index = data.cast<String, int>();
 /* 
       bool update = false;
@@ -407,7 +472,7 @@ Future<void> updateUserId(String userId) async {
       userSkylinkCache[userId] = skylink;
 
       setState();
-      cleaningFlow();
+      // cleaningFlow();
     } else {
       bool firstOwnUser = (userId == user.id) && ownMessages.isEmpty;
 
@@ -519,6 +584,8 @@ Future<void> cleaningFlow() async {
     print(st);
   }
   print('Cleaning flow done.');
+  await Future.delayed(Duration(seconds: 10));
+
   cleaningFlowRunning = false;
 }
 
@@ -554,6 +621,12 @@ Future<void> _sendMsg(String message) async {
     messages.add(msg);
     messageIds.add(msg.id);
     greyedOutMessageIds.add(msg.id);
+
+/*     for(final m in messages){
+      if(m.userId==user.id){
+        final om=ownMessages.fir
+      }
+    } */
 
     messages.sort((a, b) => b.sendAt.compareTo(a.sendAt));
 

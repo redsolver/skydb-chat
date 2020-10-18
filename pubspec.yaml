@@ -10,6 +10,7 @@ dependencies:
   skynet: ^1.0.1
   uuid: ^2.2.2
   timeago: ^2.0.27
+  markdown: ^3.0.0
 #  path: ^1.7.0
 
 dev_dependencies:

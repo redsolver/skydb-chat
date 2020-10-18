@@ -31,3 +31,8 @@ html, body {
 .archived-user {
   opacity: 0.6;
 }
+
+code {
+  background-color: var(--background-color);
+  color: var(--accent-color);
+}
