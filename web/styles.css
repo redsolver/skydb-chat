@@ -27,3 +27,7 @@ html, body {
 .trust {
   color: green;
 }
+
+.archived-user {
+  opacity: 0.6;
+}

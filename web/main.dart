@@ -10,6 +10,8 @@ import 'package:http/http.dart' as http;
 
 FileID fileID;
 
+FileID archiveFileID;
+
 const temporaryTrustedIDs = [
   'd74e7376255077b6174b8531f23b1c4f80031a0a82ead6ca27cdabde109c9cee',
 ];
@@ -21,10 +23,20 @@ void main() {
 
   if (hash.contains('#')) hash = hash.substring(1);
 
+  window.onHashChange.listen((event) {
+    window.location.reload();
+  });
+
   fileID = FileID(
     applicationID: 'skydb-chat-$hash', // ID of your application
     fileType: FileType.PublicUnencrypted,
     filename: 'chat.json', // Filename of the data you want to store
+  );
+
+  archiveFileID = FileID(
+    applicationID: 'skydb-chat-$hash', // ID of your application
+    fileType: FileType.PublicUnencrypted,
+    filename: 'archive.json', // Filename of the data you want to store
   );
 
   String portal = window.location.hostname;
@@ -114,7 +126,12 @@ void setInitialState() {
     print('msg');
     final String msg = (querySelector('#msgField') as InputElement).value;
     print(msg);
-    setStatus('Sending message...');
+    if (ownMessages.isEmpty) {
+      setStatus(
+          'Sending message... (The first message with your new account can take up to 1 min)');
+    } else {
+      setStatus('Sending message...');
+    }
     _sendMsg(msg);
 
     return false;
@@ -136,13 +153,19 @@ void setState() {
       html +=
           '<div class="message"><em>[Sending...] <b>${m.username}</b>: ${m.msg}</em></div>';
     } else {
-      String name = '<b>${m.username}</b>';
+      String name = '${m.username}';
+      name = escapeHtml(name);
+
+      String richName = '$name (${m.userId})';
+
+      name = '<b title="${richName}">${name}</b>';
 
       if (temporaryTrustedIDs.contains(m.userId)) {
-        name = '<b class="trust">✓ ${m.username}</b>';
+        name = '<b class="trust" title="${richName}">✓ ${m.username}</b>';
       }
 
       String msgText = m.msg;
+      msgText = escapeHtml(msgText);
 
       if (msgText.length > 3000) {
         msgText = msgText.substring(0, 3000) +
@@ -158,11 +181,16 @@ void setState() {
   String usersHtml = '<div><b>Users</b></div>';
 
   for (String userId in users.keys) {
+    final cl = index.containsKey(userId) ? 'user' : 'archived-user';
     usersHtml +=
-        '<div class="user">${users[userId]} (${userId.substring(0, 8)}...)</div>';
+        '<div class="$cl">${escapeHtml(users[userId])} (${userId.substring(0, 8)}...)</div>';
   }
 
   querySelector('#users').setInnerHtml(usersHtml);
+}
+
+String escapeHtml(String potentialHtml) {
+  return potentialHtml.replaceAll('<', "&lt;").replaceAll('>', "&gt;");
 }
 
 User user;
@@ -175,30 +203,78 @@ bool firstStart = false;
 
 void _startLoop() async {
   print('_startLoop');
+
+  // threads.add('archive');
+
+  // loadArchive(loadUserIDs: true);
+
   while (true) {
+    refreshCount++;
+
+    if (refreshCount % 300 == 0) {
+      cleaningFlow();
+    }
     for (final userId in [
       'index',
       ...index.keys,
+      'archive',
     ]) {
       // if ((userId == user.id) && firstStart) continue;
 
       if (!threads.contains(userId)) {
+        /*        if (userId == 'archive') {
+          loadArchive();
+        } else { */
         updateUserId(userId);
+        /*    } */
         threads.add(userId);
         continue;
       }
     }
 
-    await Future.delayed(Duration(seconds: 2));
+    await Future.delayed(Duration(seconds: 3));
   }
 }
 
-Future<void> updateUserId(String userId) async {
-  print('Update $userId');
+int refreshCount = 0;
 
+/* Future<void> loadArchive({bool loadUserIDs = false}) async {
+  print('Load archive');
   try {
+    final archiveRes = await getFile(publicUser, archiveFileID);
+
+    archive = json.decode(archiveRes.asString ?? '{}');
+
+    if (loadUserIDs) {
+      // TODO updateUserId
+
+      for (final id in archive.keys) {
+        updateUserId(id);
+      }
+    }
+  } catch (e) {
+    print(e);
+  }
+  threads.remove('archive');
+} */
+
+Future<void> updateUserId(String userId) async {
+  try {
+    // print('> $userId');
+    if (refreshCount < 6) {
+      if (userId == 'archive') {
+        print('Skip archive');
+        await Future.delayed(Duration(milliseconds: 500));
+        threads.remove(userId);
+        return;
+      }
+    }
+
     final existing = await lookupRegistry(
-        userId == 'index' ? publicUser : User.fromId(userId), fileID);
+        ['index', 'archive'].contains(userId)
+            ? publicUser
+            : User.fromId(userId),
+        userId == 'archive' ? archiveFileID : fileID);
     if (existing == null) {
       if (userId == 'index') {
         print('Init Chat...');
@@ -232,7 +308,7 @@ Future<void> updateUserId(String userId) async {
       return;
     }
 
-    print('Downloading updated JSON...');
+    print('Downloading updated JSON... $userId');
 
     // download the data in that Skylink
     final res = await http.get(Uri.https(SkynetConfig.host, '$skylink'));
@@ -245,32 +321,30 @@ Future<void> updateUserId(String userId) async {
         type: res.headers['content-type']);
 
     final data = json.decode(file.asString);
+    if (userId == 'archive') {
+      final aMap = (data as Map).cast<String, int>();
 
-    if (userId == 'index') {
+      for (final key in aMap.keys) {
+        if (!archive.containsKey(key)) {
+          archive[key] = aMap[key];
+
+          if (!index.containsKey(key)) {
+            updateUserId(key);
+          }
+        }
+      }
+      userSkylinkCache[userId] = skylink;
+      cleaningFlow();
+    } else if (userId == 'index') {
       index = data.cast<String, int>();
-
+/* 
       bool update = false;
+      bool updateArchive = false; */
 
       if (!index.containsKey(user.id)) {
         index[user.id] = DateTime.now().millisecondsSinceEpoch;
-        update = true;
-        // firstStart = true;
-      }
-      final now = DateTime.now().millisecondsSinceEpoch;
+        /*  update = true; */
 
-      final list = List.from(index.keys);
-
-      for (final key in list) {
-        int diff = now - index[key];
-
-        if (diff > ((60 * (30 + Random().nextInt(30))) * 1000)) {
-          print('Removing $key from index...');
-          index.remove(key);
-          update = true;
-        }
-      }
-
-      if (update) {
         final res = await setFile(
             publicUser,
             fileID,
@@ -283,10 +357,57 @@ Future<void> updateUserId(String userId) async {
             ));
         print(res);
       }
+/*       final now = DateTime.now().millisecondsSinceEpoch;
+
+      final list = List.from(index.keys);
+
+      if (refreshCount > 30) {
+        for (final key in list) {
+          int diff = now - index[key];
+
+          if (diff > ((600 + Random().nextInt(600)) * 1000)) {
+            print('Found old user!');
+
+            final lastMessage = messages.firstWhere(
+                (element) => element.userId == key,
+                orElse: () => null);
+
+            if (lastMessage != null) {
+              if (now - lastMessage.sendAt.millisecondsSinceEpoch <
+                  1000 * 60 * 10) {
+                print('Last message: In time!');
+                index[key] = lastMessage.sendAt.millisecondsSinceEpoch;
+                continue;
+              }
+            }
+            print('Removing $key from index...');
+            index.remove(key);
+            archive[key] = now;
+
+            update = true;
+            updateArchive = true;
+          }
+        }
+      } */
+
+/*       if (updateArchive) {
+        final res = await setFile(
+            publicUser,
+            archiveFileID,
+            SkyFile(
+              content: utf8.encode(
+                json.encode(archive),
+              ),
+              filename: archiveFileID.filename,
+              type: 'application/json',
+            ));
+        print(res);
+      } */
 
       userSkylinkCache[userId] = skylink;
 
       setState();
+      cleaningFlow();
     } else {
       bool firstOwnUser = (userId == user.id) && ownMessages.isEmpty;
 
@@ -310,10 +431,95 @@ Future<void> updateUserId(String userId) async {
       messages.sort((a, b) => b.sendAt.compareTo(a.sendAt));
       setState();
     }
-  } catch (e) {
+  } catch (e, st) {
+    print('! $userId');
     print(e);
+    print(st);
   }
   threads.remove(userId);
+}
+
+bool cleaningFlowRunning = false;
+
+Future<void> cleaningFlow() async {
+  if (cleaningFlowRunning) return;
+  cleaningFlowRunning = true;
+  try {
+    print('Cleaning flow!');
+
+    bool update = false;
+    bool updateArchive = false;
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+
+    final list = List.from(index.keys);
+
+    if (refreshCount > 5) {
+      for (final key in list) {
+        if (key == user.id) continue;
+
+        int diff = now - index[key];
+
+        if (diff > ((600 + Random().nextInt(600)) * 1000)) {
+          print('Found old user!');
+
+          final lastMessage = messages.firstWhere(
+              (element) => element.userId == key,
+              orElse: () => null);
+
+          if (lastMessage != null) {
+            if (now - lastMessage.sendAt.millisecondsSinceEpoch <
+                1000 * 60 * 10) {
+              print('Last message: In time!');
+              index[key] = lastMessage.sendAt.millisecondsSinceEpoch;
+              continue;
+            }
+          }
+          print('Removing $key from index...');
+          index.remove(key);
+          archive[key] = now;
+
+          update = true;
+          updateArchive = true;
+        }
+      }
+    }
+
+    if (updateArchive) {
+      print('Cleaning flow updateArchive');
+      final res = await setFile(
+          publicUser,
+          archiveFileID,
+          SkyFile(
+            content: utf8.encode(
+              json.encode(archive),
+            ),
+            filename: archiveFileID.filename,
+            type: 'application/json',
+          ));
+      print(res);
+    }
+
+    if (update) {
+      print('Cleaning flow update');
+      final res = await setFile(
+          publicUser,
+          fileID,
+          SkyFile(
+            content: utf8.encode(
+              json.encode(index),
+            ),
+            filename: fileID.filename,
+            type: 'application/json',
+          ));
+      print(res);
+    }
+  } catch (e, st) {
+    print(e);
+    print(st);
+  }
+  print('Cleaning flow done.');
+  cleaningFlowRunning = false;
 }
 
 Set<String> threads = {};
@@ -323,6 +529,8 @@ Map<String, int> failCount = {};
 Map<String, String> userSkylinkCache = {};
 
 Map<String, int> index = {};
+
+Map<String, int> archive = {};
 
 Set<String> messageIds = {};
 
