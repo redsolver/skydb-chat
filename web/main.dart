@@ -24,6 +24,10 @@ void main() {
 
   if (hash.contains('#')) hash = hash.substring(1);
 
+  if (hash.isNotEmpty) {
+    document.title = '#$hash | SkyMessage';
+  }
+
   window.onHashChange.listen((event) {
     window.location.reload();
   });
@@ -42,7 +46,7 @@ void main() {
 
   String portal = window.location.hostname;
 
-  if (portal == 'localhost') portal = 'siasky.net';
+  if (portal == 'localhost') portal = 'skyportal.xyz';
 
   if (portal.contains('.hns.')) {
     portal = portal.split('.hns.')[1];
@@ -181,30 +185,45 @@ void setState() {
               '... [cut down from ${msgText.length} to 3000 characters by your client]';
         }
 
-        msgText = msgText.replaceAllMapped(RegExp(r'[#@][^ ]+'), (match) {
+        msgText = msgText.replaceAllMapped(RegExp(r'(^| )[#@][^ ]+'), (match) {
           final str = msgText.substring(match.start, match.end);
 
-          if (str.startsWith('@')) {
+          if (str.trimLeft().startsWith('@')) {
             /*  final ids = [m.userId, user.id];
           ids.sort((a, b) => a.compareTo(b)); */
 
             return '<a>$str</a>';
           } else {
-            return '<a href="$str">$str</a>';
+            return '<a href="${str.trim()}">$str</a>';
           }
         });
 
-        msgText = msgText.replaceAll('sia://', 'https://${SkynetConfig.host}/');
+        msgText = msgText.replaceAllMapped('sia://', (match) {
+          final str =
+              msgText.substring(match.end).split(' ').first.split('/').first;
+
+          if (str.length < 46) {
+            return 'https://${SkynetConfig.host}/hns/';
+          } else {
+            return 'https://${SkynetConfig.host}/';
+          }
+        });
 
         msgText = markdownToHtml(
           msgText,
           extensionSet: ExtensionSet.gitHubWeb,
         );
 
-        if (msgText.length >= 7)
-          msgText = msgText.substring(3, msgText.length - 5);
+        msgText =
+            msgText.replaceAll('>https://${SkynetConfig.host}/', '>sia://');
 
-        print('[$msgText]');
+        try {
+          if (msgText.length > 8)
+            msgText = msgText.substring(3, msgText.length - 5);
+        } catch (e) {}
+
+        // print('[$msgText]');
+
         msgTextCache[m.id] = msgText;
       }
 
@@ -214,8 +233,8 @@ void setState() {
   }
 
   querySelector('#messages').setInnerHtml(html,
-      treeSanitizer:
-          NodeTreeSanitizer(NodeValidator(uriPolicy: SameDomainUriPolicy())));
+      treeSanitizer: NodeTreeSanitizer(
+          NodeValidator(uriPolicy: AllowSkylinksUrlPolicy())));
 
   String usersHtml = '<div><b>Users</b></div>';
 
@@ -234,16 +253,17 @@ void setState() {
   querySelector('#users').setInnerHtml(usersHtml);
 }
 
-class SameDomainUriPolicy implements UriPolicy {
+class AllowSkylinksUrlPolicy implements UriPolicy {
   final AnchorElement _hiddenAnchor = new AnchorElement();
   final Location _loc = window.location;
 
+  @override
   bool allowsUri(String uri) {
     _hiddenAnchor.href = uri;
+
+    if (_hiddenAnchor.hostname == _loc.hostname) return true;
     // IE leaves an empty hostname for same-origin URIs.
-    return (_hiddenAnchor.hostname.endsWith(_loc.hostname) &&
-            _hiddenAnchor.port == _loc.port &&
-            _hiddenAnchor.protocol == _loc.protocol) ||
+    return (_hiddenAnchor.hostname == SkynetConfig.host) ||
         (_hiddenAnchor.hostname == '' &&
             _hiddenAnchor.port == '' &&
             (_hiddenAnchor.protocol == ':' || _hiddenAnchor.protocol == ''));
@@ -324,7 +344,7 @@ int refreshCount = 0;
 Future<void> updateUserId(String userId) async {
   try {
     // print('> $userId');
-    if (refreshCount < 6) {
+    if (refreshCount < 3) {
       if (userId == 'archive') {
         print('Skip archive');
         await Future.delayed(Duration(milliseconds: 500));
@@ -616,6 +636,15 @@ Future<void> _sendMsg(String message) async {
   ie.value = '';
 
   try {
+    message = message
+        .replaceAll('https://siasky.net/', 'sia://')
+        .replaceAll('https://skyportal.xyz/', 'sia://')
+        .replaceAll('https://skynethub.io/', 'sia://')
+        .replaceAll('https://siacdn.com/', 'sia://')
+        .replaceAll('https://skydrain.net/', 'sia://')
+        .replaceAll('https://sialoop.net/', 'sia://')
+        .replaceAll('sia://hns/', 'sia://');
+
     final msg = Message(user.id, username, message);
     ownMessages.add(msg);
     messages.add(msg);
